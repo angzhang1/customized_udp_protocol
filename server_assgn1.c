@@ -53,7 +53,7 @@ int main(int argc, char **argv) {
   uint8_t buff_out[MAX_MSG_LENGTH];
 
   struct sockaddr_in client;
-  socklen_t len_client = 0;
+  socklen_t len_client = sizeof(client);
 
   // Set a timeout for 3 seconds
   // otherwise recvfrom will block if no message received.
@@ -80,37 +80,45 @@ int main(int argc, char **argv) {
         perror("Receving error: ");
       }
     } else {  // msg received
+
       DataPacket_t recv_data;
       int error_code = 0;
       switch (ReadType(buff)) {
         case DATA:
           error_code = ReadDataPacket(buff, ret, &recv_data);
+
           if (error_code == 0) {
             // No error, check sequence
             if (recv_data.segment_ == expected_segment) {
               error_code = DUPLICATE_PACKET;
+              expected_segment--;
             } else if (recv_data.segment_ != expected_segment + 1) {
               error_code = OUT_OF_SEQUENCE;
+              expected_segment--;
             } else {
               expected_segment++;
+              printf("Good message, data: %s of length %d\n",
+                     (char *)recv_data.payload_, recv_data.length_);
               // Good message, send ACK to client
               size_t ack_len = WriteAckPacket(recv_data.header_.client_id_,
                                               recv_data.segment_, buff_out);
               if (sendto(fd, buff_out, ack_len, 0, (struct sockaddr *)&client,
                          len_client) == -1) {
-                perror("sendto error: ");
+                perror("sendto error");
               }
               break;
             }
           }
 
           // Send reject packet if come here.
+          printf("Reject sub code to send out: %x\n", error_code);
+          expected_segment++;
           size_t rej_len =
               WriteRejectPacket(recv_data.header_.client_id_,
                                 recv_data.segment_, error_code, buff_out);
           if (sendto(fd, buff_out, rej_len, 0, (struct sockaddr *)&client,
                      len_client) == -1) {
-            perror("sendto error: ");
+            perror("sendto error");
           }
           break;
         case ACK:

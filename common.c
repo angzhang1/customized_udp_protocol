@@ -11,20 +11,22 @@ size_t WriteDataPacket(const DataPacket_t *data_pack, uint8_t *buffer) {
 
   uint8_t *buffer_begin = buffer;
   *(uint16_t *)buffer = PACKET_START_IDENTIFIER;
-  buffer++;
+  buffer += 2;
   *(uint8_t *)buffer = data_pack->header_.client_id_;
   buffer++;
-  *(uint16_t *)buffer = data_pack->header_.type_;
-  buffer++;
+  *(uint16_t *)buffer = DATA;
+  buffer += 2;
   *(uint8_t *)buffer = data_pack->segment_;
   buffer++;
   *(uint8_t *)buffer = data_pack->length_;
   buffer++;
-  memcpy((void *)buffer, (void *)data_pack->payload_, data_pack->length_);
-  buffer += sizeof(data_pack->payload_);
-  *(uint16_t *)buffer++ = PACKET_END_IDENTIFIER;
+  size_t payload_len = strlen((char *)data_pack->payload_) + 1;
+  memcpy((void *)buffer, (void *)data_pack->payload_, payload_len);
+  buffer += payload_len;
+  *(uint16_t *)buffer = data_pack->end_id_;
+  buffer += 2;
 
-  return ((uint8_t *)buffer - buffer_begin);
+  return (buffer - buffer_begin);
 }
 
 size_t WriteAckPacket(uint8_t client_id, uint8_t segment, uint8_t *buffer) {
@@ -61,7 +63,9 @@ PACKET_TYPE ReadType(const uint8_t *buffer) {
   PACKET_TYPE type = UNKNOWN;
   if (buffer != NULL) {
     buffer += 3;
+
     type = *(uint16_t *)buffer;
+    // printf("Type: %x, %x \n", type, *(uint16_t *)buffer);
   }
   return type;
 }
@@ -89,7 +93,7 @@ int ReadDataPacket(const uint8_t *buffer, int buf_len, DataPacket_t *data) {
       error = LENGTH_MISMATCH;
       printf("Length mismatch, will not copy this data!\n");
     } else if (data->length_ < MAX_PAYLOAD_LENGTH) {
-      memcpy((void *)data->payload_, (void *)buffer, sizeof(data->length_));
+      memcpy((void *)data->payload_, (void *)buffer, data->length_);
       buffer += data->length_;
       if (*(uint16_t *)buffer != PACKET_END_IDENTIFIER) {
         error = END_OF_PACKET_MISSING;

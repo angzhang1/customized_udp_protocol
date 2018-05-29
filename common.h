@@ -40,7 +40,7 @@ typedef struct {
   uint8_t length_;
   uint8_t payload_[MAX_PAYLOAD_LENGTH];
   uint16_t end_id_;
-} __attribute__((packed)) DataPacket_t;
+} DataPacket_t;
 
 typedef struct {
   Header header_;
