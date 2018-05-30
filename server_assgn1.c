@@ -75,7 +75,7 @@ int main(int argc, char **argv) {
                        &len_client);
     if (ret < 0) {
       if (errno == EWOULDBLOCK) {
-        printf("No message received, keep listening\n");
+        printf("Keep listening for messages\n");
       } else {
         perror("Receving error: ");
       }

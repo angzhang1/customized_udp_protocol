@@ -1,5 +1,6 @@
 /**
-Client Assignment 1
+Client Assignment 2
+Send subscriber to server to verify if it has paid for the access
 **/
 
 #include "common.h"
@@ -23,8 +24,7 @@ void intHandler(int dummy) {
   running = false;
 }
 
-const int NUMBER_PACKETS = 5;
-const uint8_t CLIENT_ID = 99;
+const uint8_t CLIENT_ID = 98;
 
 int main(int argc, char **argv) {
   signal(SIGINT, &intHandler);
