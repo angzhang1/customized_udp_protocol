@@ -1,6 +1,9 @@
 /**
-Common definitions for the project
-**/
+ * @author Ang Zhang
+ * @student_id W1287478
+ *
+ * Common definitions for the project
+ */
 #ifndef COMMON_H_
 #define COMMON_H_
 
@@ -11,8 +14,12 @@ static const uint16_t PACKET_START_IDENTIFIER = 0xffff;
 static const uint16_t PACKET_END_IDENTIFIER = 0xffff;
 
 // 264 bytes maximum message size
-static const size_t MAX_MSG_LENGTH = 264;
-static const size_t MAX_PAYLOAD_LENGTH = 255;
+#define MAX_MSG_LENGTH 264
+#define MAX_PAYLOAD_LENGTH 255
+
+// Defines the serve ip address and port
+static const char SERVER_IP[] = "127.0.0.1";
+static const uint16_t SERVER_PORT = 8009u;
 
 typedef enum {
   DATA = 0xfff1,
@@ -55,9 +62,6 @@ typedef struct {
   uint16_t end_id_;
 } __attribute__((packed)) RejectPacket_t;
 
-static const char SERVER_IP[] = "127.0.0.1";
-static const uint16_t SERVER_PORT = 8009u;
-
 // Write packet to a message (memory already allocated enough)
 // Return the size
 size_t WriteDataPacket(const DataPacket_t* data_pack, uint8_t* buffer);
@@ -65,10 +69,18 @@ size_t WriteAckPacket(uint8_t client_id, uint8_t segment, uint8_t* buffer);
 size_t WriteRejectPacket(uint8_t client_id, uint8_t segment,
                          uint16_t reject_code, uint8_t* buffer);
 
+// Read certain information from a buffer with specified format
 PACKET_TYPE ReadType(const uint8_t* buffer);
+
+// Helper function to read the header information
 Header ReadHeader(const uint8_t* buffer);
+
+// Read a data packet from buffer according to the format
+// Return the size of the data packet received.
 int ReadDataPacket(const uint8_t* buffer, int buf_len, DataPacket_t* data);
+
 AckPacket_t ReadAckPacket(const uint8_t* buffer);
+
 RejectPacket_t ReadRejectPacket(const uint8_t* buffer);
 
 #endif  // COMMON_H_

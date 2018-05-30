@@ -62,7 +62,7 @@ size_t WriteRejectPacket(uint8_t client_id, uint8_t segment,
 PACKET_TYPE ReadType(const uint8_t *buffer) {
   PACKET_TYPE type = UNKNOWN;
   if (buffer != NULL) {
-    buffer += 3;
+    buffer += 3;  // 3 is the offset to the type field
 
     type = *(uint16_t *)buffer;
     // printf("Type: %x, %x \n", type, *(uint16_t *)buffer);
