@@ -33,17 +33,23 @@ struct Node_t {
   struct Node_t *next_;
 };
 
+typedef enum {
+  PAID = 1,
+  UNPAID = 0,
+  NOT_FOUND = -1,
+} Status_t;
+
 // Search in the database for the phone no
 // Return: 1: paid, 0: not paid, -1: not found (two cases)
-int IsPaid(uint32_t phone_no, int tech, const struct Node_t *table) {
-  int ret = -1;
+Status_t IsPaid(uint32_t phone_no, int tech, const struct Node_t *table) {
+  Status_t ret = NOT_FOUND;
   char phone_number[11];
   sprintf(phone_number, "%u", phone_no);
 
   while (table != NULL) {
     if (strcmp(table->entry_.phone_number_, phone_number) == 0) {
       if (tech == table->entry_.technology_) {
-        ret =  table->entry_.paid_;
+        ret = table->entry_.paid_;
         break;
       }
     }
@@ -95,7 +101,89 @@ int main(int argc, char **argv) {
            sub_entry->phone_number_, sub_entry->technology_, sub_entry->paid_);
   }
 
-  printf("Is Paid: %d", IsPaid(4086808821, 3, dummy_head->next_));
+  int fd;
+  // create a udp socket
+  if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+    perror("cannot create socket");
+    return 0;
+  }
+
+  printf("created socket: descriptor = %d\n", fd);
+
+  struct sockaddr_in server;
+  memset((void *)&server, 0, sizeof(server));
+  server.sin_family = AF_INET;
+  server.sin_addr.s_addr = inet_addr(SERVER_IP);
+  server.sin_port = htons(SERVER_PORT);
+
+  if (bind(fd, (struct sockaddr *)&server, sizeof(server)) < 0) {
+    perror("bind failed");
+    close(fd);
+    return 0;
+  }
+  printf("bind complete. Port number = %d\n", ntohs(server.sin_port));
+
+  uint8_t buff[14];
+  uint8_t buff_out[14];
+
+  struct sockaddr_in client;
+  socklen_t len_client = sizeof(client);
+
+  // Set a timeout for 3 seconds
+  // otherwise recvfrom will block if no message received.
+  struct timeval timeout;
+  timeout.tv_sec = 3;
+  timeout.tv_usec = 0;
+
+  if (setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout,
+                 sizeof(timeout)) < 0) {
+    perror("setsockopt failed\n");
+    return 0;
+  }
+
+  struct Node_t *table = dummy_head->next_;
+
+  while (running) {
+    int ret = recvfrom(fd, buff, sizeof(buff), 0, (struct sockaddr *)&client,
+                       &len_client);
+    if (ret < 0) {
+      if (errno == EWOULDBLOCK) {
+        printf("Keep listening for messages\n");
+      } else {
+        perror("Receving error: ");
+      }
+    } else {  // msg received
+      VerificationPacket_t pack = ReadVerificationPacket(buff);
+      if (pack.status_ == ACC_PER) {
+        Status_t query_res = IsPaid(pack.subscriber_, pack.technology_, table);
+
+        printf("Request | Subscriber: %u, Technology: %dG, Status: ",
+               pack.subscriber_, pack.technology_);
+
+        if (query_res == NOT_FOUND) {
+          pack.status_ = NOT_EXIST;
+          printf("Not exist\n");
+        } else if (query_res == PAID) {
+          pack.status_ = ACCESS_OK;
+          printf("Access OK!\n");
+        } else if (query_res == UNPAID) {
+          pack.status_ = NOT_PAID;
+          printf("Not paid!\n");
+        }
+
+        size_t reply_len = WriteVerificationPacket(&pack, buff_out);
+        if (sendto(fd, buff_out, reply_len, 0, (struct sockaddr *)&client,
+                   len_client) == -1) {
+          perror("sendto error");
+        } else {
+          printf("Response sent to client\n");
+          printf("----\n");
+        }
+      } else {
+        printf("Unknown request. Ignore this message\n");
+      }
+    }
+  }
 
   // Delete linked list.
   cur = dummy_head->next_;
@@ -108,5 +196,6 @@ int main(int argc, char **argv) {
   }
 
   fclose(fp);
+  close(fd);
   return 0;
 }

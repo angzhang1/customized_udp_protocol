@@ -119,3 +119,20 @@ RejectPacket_t ReadRejectPacket(const uint8_t *buffer) {
   }
   return pack;
 }
+
+VerificationPacket_t ReadVerificationPacket(const uint8_t *buffer) {
+  VerificationPacket_t ret;
+  if (buffer != NULL) {
+    memcpy((void *)&ret, (void *)buffer, sizeof(ret));
+  }
+  return ret;
+}
+
+size_t WriteVerificationPacket(const VerificationPacket_t *packet,
+                               uint8_t *buffer) {
+  if (buffer != NULL && packet != NULL) {
+    memcpy((void *)buffer, (void *)packet, sizeof(VerificationPacket_t));
+    return sizeof(VerificationPacket_t);
+  }
+  return 0;
+}

@@ -83,4 +83,29 @@ AckPacket_t ReadAckPacket(const uint8_t* buffer);
 
 RejectPacket_t ReadRejectPacket(const uint8_t* buffer);
 
+// Message Definitions for Assignment2
+
+typedef enum {
+  ACC_PER = 0xfff8,
+  NOT_PAID = 0xfff9,
+  NOT_EXIST = 0xfffa,
+  ACCESS_OK = 0xfffb,
+} VERIFY_TYPE;
+
+typedef struct {
+  uint16_t start_id_;
+  uint8_t client_id_;
+  uint16_t status_;
+  uint8_t segment_;
+  uint8_t length_;
+  uint8_t technology_;
+  uint32_t subscriber_;
+  uint16_t end_id_;
+} __attribute__((packed)) VerificationPacket_t;
+
+VerificationPacket_t ReadVerificationPacket(const uint8_t* buffer);
+
+size_t WriteVerificationPacket(const VerificationPacket_t* packet,
+                               uint8_t* buffer);
+
 #endif  // COMMON_H_

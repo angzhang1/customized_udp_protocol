@@ -10,5 +10,8 @@ add_executable(client_assgn1 client_assgn1.c)
 target_link_libraries(client_assgn1 common)
 
 add_executable(server_assgn2 server_assgn2.c)
+target_link_libraries(server_assgn2 common)
+add_executable(client_assgn2 client_assgn2.c)
+target_link_libraries(client_assgn2 common)
 
 

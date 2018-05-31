@@ -30,11 +30,11 @@ int main(int argc, char **argv) {
   signal(SIGINT, &intHandler);
 
   FILE *fp = NULL;
-  char *filename = "../good_data.txt";
+  char *filename = "../subscriber_input.txt";
   if (argc == 2) {
     filename = argv[argc - 1];
   }
-  printf("Reading msg file: %s\n", filename);
+  printf("Reading subscriber input file: %s\n", filename);
   fp = fopen(filename, "r");
   if (fp == NULL) {
     fprintf(stderr, "Open file %s failed\n", filename);
@@ -65,29 +65,38 @@ int main(int argc, char **argv) {
     return 0;
   }
 
-  uint8_t buff[MAX_MSG_LENGTH];
-  uint8_t buff_out[MAX_MSG_LENGTH];
+  uint8_t buff[14];
+  uint8_t buff_out[14];
 
-  DataPacket_t data_pack;
-  data_pack.header_.client_id_ = CLIENT_ID;
+  VerificationPacket_t ver_pack;
+  ver_pack.client_id_ = CLIENT_ID;
+  ver_pack.start_id_ = PACKET_START_IDENTIFIER;
+  ver_pack.status_ = ACC_PER;
+  ver_pack.segment_ = 0;
+  ver_pack.length_ = 5;
+  ver_pack.end_id_ = PACKET_END_IDENTIFIER;
 
-  while (running &&
-         fscanf(fp, "%hhu %hhu %s %hi", &data_pack.segment_, &data_pack.length_,
-                data_pack.payload_, &data_pack.end_id_) == 4) {
-    size_t data_len = WriteDataPacket(&data_pack, buff_out);
+  uint8_t tech = 0;
+  uint32_t sub_no = 0;
+  while (running && fscanf(fp, "%u %hhu", &sub_no, &tech) == 2) {
+    ver_pack.segment_++;
+    ver_pack.subscriber_ = sub_no;
+    ver_pack.technology_ = tech;
+    size_t request_len = WriteVerificationPacket(&ver_pack, buff_out);
     // printf("data written: %s\n", buff_out + 7);
     // printf("Data packet len: %d\n", data_len);
-    if (data_len == 0) {
-      printf("Empty data!\n");
+    if (request_len == 0) {
+      fprintf(stderr, "Empty data!\n");
       break;
     }
+    printf("Sending request for %u, %dG\n", sub_no, tech);
 
     // Retry for ACK for at most 3 times
     const int RETRY_FOR_ACK = 3;
     uint32_t server_len = sizeof(server);
     int j = 0;
     for (j = 0; j <= RETRY_FOR_ACK; ++j) {
-      int ret = sendto(fd, buff_out, data_len, 0, (struct sockaddr *)&server,
+      int ret = sendto(fd, buff_out, request_len, 0, (struct sockaddr *)&server,
                        server_len);
       if (ret < 0) {
         perror("sendto error: \n");
@@ -99,9 +108,8 @@ int main(int argc, char **argv) {
         break;
       } else if (ret < 0 && j < RETRY_FOR_ACK) {
         if (errno == EWOULDBLOCK) {
-          printf(
-              "No ACK message received, resending data, number of retry: %d\n",
-              j + 1);
+          printf("No message received, resending data, number of retry: %d\n",
+                 j + 1);
         } else {
           perror("Receving error: ");
         }
@@ -113,39 +121,26 @@ int main(int argc, char **argv) {
       break;
     }
 
-    AckPacket_t ack_packet;
-    switch (ReadType(buff)) {
-      case ACK:
-        ack_packet = ReadAckPacket(buff);
-        printf("Packet Acknownledged for segment %d \n",
-               ack_packet.recv_segment_);
+    VerificationPacket_t response = ReadVerificationPacket(buff);
+    printf("Response: ");
+    switch (response.status_) {
+      case NOT_PAID:
+        printf("Subscriber %u not paid for %dG access\n", response.subscriber_,
+               response.technology_);
         break;
-      case REJECT: {
-        RejectPacket_t rej_pack = ReadRejectPacket(buff);
-        printf("Packet rejected: ");
-        switch (rej_pack.reject_code_) {
-          case OUT_OF_SEQUENCE:
-            printf("Out of sequence\n");
-            break;
-          case LENGTH_MISMATCH:
-            printf("Length mismatch\n");
-            break;
-          case END_OF_PACKET_MISSING:
-            printf("End of packet missing\n");
-            break;
-          case DUPLICATE_PACKET:
-            printf("Duplicate packet\n");
-            break;
-          default:
-            printf("Other reasons\n");
-            break;
-        }
+      case NOT_EXIST:
+        printf("Subscriber %u not exist in database\n", response.subscriber_);
         break;
-      }
-      case DATA:
+      case ACCESS_OK:
+        printf("Subscriber %u OK to access %dG\n", response.subscriber_,
+               response.technology_);
+        break;
       default:
+        printf("Unknown response from server\n");
         break;
     }
+    printf("----\n");
+    sleep(1);
   }
 
   printf("Client exiting.\n");
