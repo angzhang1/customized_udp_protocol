@@ -1,6 +1,8 @@
 /**
 Client Assignment 2
 Send subscriber to server to verify if it has paid for the access
+Ang Zhang
+W1287478
 **/
 
 #include "common.h"

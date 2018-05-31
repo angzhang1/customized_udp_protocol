@@ -42,7 +42,7 @@ typedef enum {
 // Search in the database for the phone no
 // Return: 1: paid, 0: not paid, -1: not found (two cases)
 Status_t IsPaid(uint32_t phone_no, int tech, const struct Node_t *table) {
-  Status_t ret = NOT_FOUND;
+  Status_t ret = NOT_FOUND;  // not found by default
   char phone_number[11];
   sprintf(phone_number, "%u", phone_no);
 
@@ -129,7 +129,7 @@ int main(int argc, char **argv) {
   struct sockaddr_in client;
   socklen_t len_client = sizeof(client);
 
-  // Set a timeout for 3 seconds
+  // Set a timeout
   // otherwise recvfrom will block if no message received.
   struct timeval timeout;
   timeout.tv_sec = 3;
@@ -157,7 +157,7 @@ int main(int argc, char **argv) {
       if (pack.status_ == ACC_PER) {
         Status_t query_res = IsPaid(pack.subscriber_, pack.technology_, table);
 
-        printf("Request | Subscriber: %u, Technology: %dG, Status: ",
+        printf("Request: Subscriber: %u, Technology: %dG, Status: ",
                pack.subscriber_, pack.technology_);
 
         if (query_res == NOT_FOUND) {
