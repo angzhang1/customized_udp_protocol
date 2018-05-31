@@ -86,6 +86,7 @@ int main(int argc, char **argv) {
       switch (ReadType(buff)) {
         case DATA:
           error_code = ReadDataPacket(buff, ret, &recv_data);
+          printf("Expected segment: %d\n", expected_segment + 1);
 
           if (error_code == 0) {
             // No error, check sequence
@@ -128,6 +129,7 @@ int main(int argc, char **argv) {
           printf("Unknown or irrelevant type received!\n");
           break;
       }
+      printf("----\n");
     }
   }
 
