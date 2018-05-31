@@ -34,15 +34,16 @@ struct Node_t {
 };
 
 // Search in the database for the phone no
+// Return: 1: paid, 0: not paid, -1: not found (two cases)
 int IsPaid(uint32_t phone_no, int tech, const struct Node_t *table) {
-  int ret = 0;
+  int ret = -1;
   char phone_number[11];
   sprintf(phone_number, "%u", phone_no);
 
   while (table != NULL) {
     if (strcmp(table->entry_.phone_number_, phone_number) == 0) {
       if (tech == table->entry_.technology_) {
-        ret = 1;
+        ret =  table->entry_.paid_;
         break;
       }
     }
